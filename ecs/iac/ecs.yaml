@@ -1,0 +1,133 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: ECS cluster and service for Spring Boot application
+Parameters:
+  pDesiredCount:
+    Type: String
+  pALBArn:
+    Type: String
+  pTargetGroupArn:
+    Type: String
+  pTaskSGroup:
+    Type: String
+  pSubnetIds:
+    Type: List<String>
+  pImageUri:
+    Type: String
+  pTableArn:
+    Type: String
+  pLogGroup:
+    Type: String
+    Default: /aws/ecs/springboot
+Resources:
+  ExecRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: '/service-role/'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: '/'
+      Policies:
+        - PolicyName: cloudwatch-logs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogStreams
+                Resource: 'arn:aws:logs:*:*:log-group:*:*'
+        - PolicyName: dynamodb
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:DeleteItem
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:UpdateItem
+                Resource: !Ref pTableArn
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      CapacityProviders:
+        - FARGATE
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Ref pLogGroup
+      RetentionInDays: 7
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !GetAtt Cluster.Arn
+      DesiredCount: !Ref pDesiredCount
+      LaunchType: FARGATE
+      LoadBalancers:
+        - ContainerName: springboot_container
+          ContainerPort: 8080
+          TargetGroupArn: !Ref pTargetGroupArn
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref pTaskSGroup
+          Subnets: !Ref pSubnetIds
+      TaskDefinition: !Ref Task
+  Task:
+    DependsOn: LogGroup
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: springboot
+      ExecutionRoleArn: !GetAtt ExecRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      Cpu: 1024
+      Memory: 2048
+      NetworkMode: awsvpc
+      ContainerDefinitions:
+        - Name: springboot_container
+          Image: !Ref pImageUri
+          Environment:
+            - Name: TABLE
+              Value: !Select [1, !Split ["/", !Ref pTableArn]]
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref pLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: app
+          PortMappings:
+            - ContainerPort: 8080
+              Protocol: tcp
+Outputs:
+  outCluster:
+    Value: !Ref Cluster
+  outService:
+    Value: !Ref Service
+  outTask:
+    Value: !Ref Task

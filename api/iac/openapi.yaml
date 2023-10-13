@@ -1,0 +1,56 @@
+openapi: 3.0.1
+info:
+  title: lambda-client-api
+  description: client endpoint
+  version: 0.1.0
+
+components:
+  securitySchemes:
+    cognito-authorizer:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: cognito_user_pools
+      x-amazon-apigateway-authorizer:
+        type: cognito_user_pools
+        providerARNs:
+          - Fn::Sub: 'arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${pUserPoolId}'
+    # lambda-authorizer:
+    #   type: apiKey
+    #   name: Authorization
+    #   in: header
+    #   x-amazon-apigateway-authtype: custom
+    #   x-amazon-apigateway-authorizer:
+    #     type: request
+    #     authorizerUri:
+    #       Fn::Sub: 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FnAuth.Arn}/invocations'
+    #     authorizerResultTtlInSeconds: 0
+    #     identitySource: method.request.header.Authorization
+paths:
+  /:
+    post:
+      summary: client
+      description: client to private vpc lattice services
+      responses:
+        200:
+          description: ok
+        default:
+          description: error
+      security:
+        - cognito-authorizer: []
+      x-amazon-apigateway-integration:
+        httpMethod: POST
+        responses:
+          default:
+            statusCode: 200
+        type: aws_proxy
+        uri:
+          Fn::Sub: 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Fn.Arn}/invocations'
+
+x-amazon-apigateway-request-validators:
+  all:
+    validateRequestBody: true
+    validateRequestParameters: true
+  params-only:
+    validateRequestBody: false
+    validateRequestParameters: true

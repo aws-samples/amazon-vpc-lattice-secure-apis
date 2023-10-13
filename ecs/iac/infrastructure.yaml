@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Infrastructure for an ECS application
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  pVpcId:
+    Type: String
+  pHostedZoneDomain:
+    Type: String
+  pDomainName:
+    Type: String
+  pClientIngressCidr:
+    Type: String
+  pAppIngressCidr:
+    Type: String
+    Default: 169.254.171.0/24
+  pSourcePrefixListId:
+    Type: String
+    Default: pl-07cbd8b5e26960eac
+  pSubnetIds:
+    Type: List<String>
+Resources:
+  # Route 53
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref pHostedZoneDomain
+      VPCs:
+        - VPCId: !Ref pVpcId
+          VPCRegion: !Ref AWS::Region
+  # ACM
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref pDomainName
+      DomainValidationOptions:
+        - DomainName: !Ref pDomainName
+          HostedZoneId: !Ref HostedZone
+  # Security Groups
+  ClientSGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for clients
+      VpcId: !Ref pVpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref pClientIngressCidr
+  AppSGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ALB
+      VpcId: !Ref pVpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref ClientSGroup
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourcePrefixListId: !Ref pSourcePrefixListId
+  TaskSGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for tasks
+      VpcId: !Ref pVpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          SourceSecurityGroupId: !Ref AppSGroup
+  # ALB
+  AppLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      IpAddressType: ipv4
+      Scheme: internal
+      SecurityGroups:
+        - !Ref AppSGroup
+      Subnets: !Ref pSubnetIds
+      Type: application
+  AppListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Certificates:
+        - CertificateArn: !Ref Certificate
+      DefaultActions:
+        - Order: 1
+          TargetGroupArn: !Ref AppTargets
+          Type: forward
+      LoadBalancerArn: !Ref AppLB
+      Port: 443
+      Protocol: HTTPS
+  AppTargets:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Matcher:
+        HttpCode: 200
+      HealthCheckIntervalSeconds: 15
+      HealthCheckPath: "/customer"
+      HealthCheckProtocol: "HTTP"
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Port: 8080
+      Protocol: HTTP
+      TargetType: ip
+      VpcId: !Ref pVpcId
+  # Route53
+  AppAlias:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZone
+      Name: !Ref pDomainName
+      ResourceRecords:
+        - !GetAtt AppLB.DNSName
+      TTL: 300
+      Type: CNAME
+Outputs:
+  outHostedZoneId:
+    Value: !Ref HostedZone
+  outCertificateArn:
+    Value: !Ref Certificate
+  outClientSGroup:
+    Value: !Ref ClientSGroup
+  outALBSGroup:
+    Value: !Ref AppSGroup
+  outTaskSGroup:
+    Value: !Ref TaskSGroup
+  outAppLB:
+    Value: !Ref AppLB
+  outAppLBDNSName:
+    Value: !GetAtt AppLB.DNSName
+  outAppTGroup:
+    Value: !Ref AppTargets

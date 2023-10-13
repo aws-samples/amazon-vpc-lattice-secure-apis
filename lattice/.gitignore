@@ -1,0 +1,8 @@
+# directories
+etc/*.sh
+etc/*.json
+tmp
+
+# files
+iac/*_output.yaml
+notes.md

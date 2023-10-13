@@ -1,0 +1,32 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Infrastructure for an VPC Lattice
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  pVpcId:
+    Type: String
+  pHostedZoneDomain:
+    Type: String
+  pDomainName:
+    Type: String
+Resources:
+  # Route 53
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref pHostedZoneDomain
+      VPCs:
+        - VPCId: !Ref pVpcId
+          VPCRegion: !Ref AWS::Region
+  # ACM
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref pDomainName
+      DomainValidationOptions:
+        - DomainName: !Ref pDomainName
+          HostedZoneId: !Ref HostedZone
+Outputs:
+  outHostedZoneId:
+    Value: !Ref HostedZone
+  outCertificateArn:
+    Value: !Ref Certificate

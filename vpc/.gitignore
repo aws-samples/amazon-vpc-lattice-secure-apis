@@ -1,0 +1,12 @@
+# node
+*.js
+!jest.config.js
+*.d.ts
+node_modules
+
+# cdk
+.cdk.staging
+cdk.out
+
+# project
+etc/*.sh

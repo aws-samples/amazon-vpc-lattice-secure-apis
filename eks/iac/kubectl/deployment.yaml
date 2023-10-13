@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-deployment
+  namespace: spring
+  labels:
+    app: spring-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: spring-api
+  template:
+    metadata:
+      labels:
+        app: spring-api
+    spec:
+      serviceAccountName: spring-serviceaccount
+      containers:
+      - name: spring-container
+        image: 001122334455.dkr.ecr.us-east-1.amazonaws.com/your-ecr-repository-name:1
+        env:
+          - name: TABLE
+            value: your-example-dynamodb-table-name
+        ports:
+        - name: http
+          containerPort: 8080

@@ -1,0 +1,23 @@
+apiVersion: application-networking.k8s.aws/v1alpha1
+kind: TargetGroupPolicy
+metadata:
+    name: spring-service-policy
+spec:
+    targetRef:
+        group: ""
+        kind: Service
+        name: spring-service
+        namespace: spring
+    protocol: HTTP
+    protocolVersion: HTTP1
+    healthCheck:
+        enabled: true
+        intervalSeconds: 5
+        timeoutSeconds: 5
+        healthyThresholdCount: 2
+        unhealthyThresholdCount: 2
+        path: "/"
+        port: 8080
+        protocol: HTTP
+        protocolVersion: HTTP1
+        statusMatch: "200"

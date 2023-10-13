@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Bastion for access private VPC resources
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  pVpcId:
+    Type: String
+  pSubnetIds:
+    Type: List<String>
+  pIngressCidr:
+    Type: String
+  pClientSGroup:
+    Type: String
+  pImageId:
+    Type: String
+  pInstanceType:
+    Type: String
+  pKey:
+    Type: String
+Resources:
+  # Security Groups
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for bastion
+      VpcId: !Ref pVpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref pIngressCidr
+  # Bastion
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: '/'
+      Policies:
+        - PolicyName: cloudwatch-logs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogStreams
+                Resource: 'arn:aws:logs:*:*:log-group:*:*'
+        - PolicyName: cloudformation
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:ListStacks
+                Resource: !Sub 'arn:aws:cloudformation:*:${AWS::AccountId}:stack/*/*'
+  Profile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref Role
+  Bastion:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile: !Ref Profile
+      ImageId: !Ref pImageId
+      InstanceType: !Ref pInstanceType
+      KeyName: !Ref pKey
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          GroupSet:
+            - !Ref SecurityGroup
+            - !Ref pClientSGroup
+          SubnetId: !Select ["0", !Ref pSubnetIds]
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install jq -y
+Outputs:
+  outPublicDnsName:
+    Value: !GetAtt Bastion.PublicDnsName
+  outPublicIp:
+    Value: !GetAtt Bastion.PublicIp
+  outSecurityGroup:
+    Value: !Ref SecurityGroup

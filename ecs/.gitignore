@@ -1,0 +1,7 @@
+# directories
+tmp
+
+# files
+etc/*.sh
+iac/*_output.yaml
+*.pem

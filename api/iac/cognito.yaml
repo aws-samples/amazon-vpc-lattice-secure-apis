@@ -1,0 +1,127 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Cognito authentication for API Gateway
+Parameters:
+  pUserPoolDomain:
+    Type: String
+  pUserName:
+    Type: String
+  pUserEmail:
+    Type: String
+Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+          RequireUppercase: true
+          TemporaryPasswordValidityDays: 3
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref pUserPoolDomain
+      UserPoolId: !Ref UserPool
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ExplicitAuthFlows:
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      GenerateSecret: false
+      UserPoolId: !Ref UserPool
+  UserPoolUser:
+    Type: AWS::Cognito::UserPoolUser
+    Properties:
+      Username: !Ref pUserName
+      UserPoolId: !Ref UserPool
+      UserAttributes:
+        - Name: email
+          Value: !Ref pUserEmail
+        - Name: email_verified
+          Value: true
+      ForceAliasCreation: true
+  UserPoolGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      Precedence: 0
+      UserPoolId: !Ref UserPool
+  RoleAuthenticated:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              "StringEquals":
+                cognito-identity.amazonaws.com:aud: !Ref IdentityPool
+              "ForAnyValue:StringLike":
+                cognito-identity.amazonaws.com:amr: authenticated
+      Path: /
+      Policies:
+        - PolicyName: vpc-lattice
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - vpc-lattice-svcs:Invoke
+                Resource: "*"
+  RoleAnonymous:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              "StringEquals":
+                cognito-identity.amazonaws.com:aud: !Ref IdentityPool
+              "ForAnyValue:StringLike":
+                cognito-identity.amazonaws.com:amr: unauthenticated
+      Path: /
+      Policies:
+        - PolicyName: vpc-lattice
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Deny
+                Action:
+                  - vpc-lattice-svcs:Invoke
+                Resource: "*"
+  IdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      AllowUnauthenticatedIdentities: false
+      CognitoIdentityProviders:
+        - ProviderName: !GetAtt UserPool.ProviderName
+          ClientId: !Ref UserPoolClient
+  IdentityRoleAttachment:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId: !Ref IdentityPool
+      Roles:
+        "authenticated": !GetAtt RoleAuthenticated.Arn
+        "unauthenticated": !GetAtt RoleAnonymous.Arn
+Outputs:
+  outUserPool:
+    Value: !Ref UserPool
+  outUserPoolProviderName:
+    Value: !GetAtt UserPool.ProviderName
+  outUserPoolProviderUrl:
+    Value: !GetAtt UserPool.ProviderURL
+  outUserPoolClientId:
+    Value: !Ref UserPoolClient
+  outUserPoolDomain:
+    Value: !Ref UserPoolDomain
+  outIdentityPool:
+    Value: !Ref IdentityPool

@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC Lattice service network for multi-account deployment
+Transform:
+  - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
+Parameters:
+  pPrincipalOrgId:
+    Type: String
+  pVpcIds:
+    Type: List<String>
+  pAccountIds:
+    Type: List<String>
+Resources:
+  Network:
+    Type: AWS::VpcLattice::ServiceNetwork
+    Properties:
+      AuthType: AWS_IAM
+  NetworkAuthPolicy:
+    Type: AWS::VpcLattice::AuthPolicy
+    Properties:
+      ResourceIdentifier: !Ref Network
+      Policy:
+        Statement:
+          - Principal:
+              AWS: "*"
+            Effect: Allow
+            Action: vpc-lattice-svcs:Invoke
+            Resource: "*"
+            Condition:
+              StringEquals:
+                "vpc-lattice-svcs:SourceVpc": !Ref pVpcIds
+  NetworkLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lattice/network-${Network.Id}"
+      RetentionInDays: 7
+  NetworkSubscription:
+    Type: AWS::VpcLattice::AccessLogSubscription
+    Properties:
+      DestinationArn: !GetAtt NetworkLogGroup.Arn
+      ResourceIdentifier: !Ref Network
+  NetworkShare:
+    Type: AWS::RAM::ResourceShare
+    Properties:
+      Name: lattice-network-shared
+      Principals: !Ref pAccountIds
+      ResourceArns:
+        - !Ref Network
+Outputs:
+  outNetworkArn:
+    Value: !Ref Network

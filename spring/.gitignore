@@ -1,0 +1,21 @@
+# compiled
+target/
+
+# config
+.mvn/
+etc/*.docker
+etc/*.json
+etc/*.sh
+mvnw
+notes.md
+
+# project
+.classpath
+.project
+.settings/
+
+# iac
+iac/*_output.yaml
+
+# directories
+tmp

@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC Lattice service for multi-account deployment
+Transform:
+  - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
+Parameters:
+  pNetworkArn:
+    Type: String
+  pDomainName:
+    Type: String
+  pCertificateArn:
+    Type: String
+  pTargetType:
+    Type: String
+  pTargetArn:
+    Type: String
+  pVpcId:
+    Type: String
+    Default: undefined
+Conditions:
+  IsLambdaTarget: !Equals [!Ref pTargetType, "LAMBDA"]
+Resources:
+  Service:
+    Type: AWS::VpcLattice::Service
+    Properties:
+      AuthType: AWS_IAM
+      CustomDomainName: !Ref pDomainName
+      CertificateArn: !Ref pCertificateArn
+  ServiceAssociation:
+    Type: AWS::VpcLattice::ServiceNetworkServiceAssociation
+    Properties:
+      ServiceNetworkIdentifier: !Select [1, !Split ["/", !Ref pNetworkArn]]
+      ServiceIdentifier: !Ref Service
+  ServiceAuthPolicy:
+    Type: AWS::VpcLattice::AuthPolicy
+    Properties:
+      ResourceIdentifier: !Ref Service
+      Policy:
+        Statement:
+          - Principal: "*"
+            Effect: Allow
+            Action: vpc-lattice-svcs:Invoke
+            Resource: "*"
+            Condition:
+              StringNotEquals:
+                "aws:PrincipalType": "Anonymous"
+              StringEquals:
+                "vpc-lattice-svcs:ServiceNetworkArn": !Ref pNetworkArn
+  ServiceLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lattice/service-${Service.Id}"
+      RetentionInDays: 7
+  ServiceLogSubscription:
+    Type: AWS::VpcLattice::AccessLogSubscription
+    Properties:
+      ResourceIdentifier: !Ref Service
+      DestinationArn: !GetAtt ServiceLogGroup.Arn
+  ServiceListener:
+    Type: AWS::VpcLattice::Listener
+    Properties:
+      ServiceIdentifier: !Ref Service
+      Protocol: HTTPS
+      DefaultAction:
+        Forward:
+          TargetGroups:
+            - TargetGroupIdentifier: !Ref ServiceTargetGroup
+              Weight: 100
+  ServiceTargetGroup:
+    Type: AWS::VpcLattice::TargetGroup
+    Properties:
+      Type: !Ref pTargetType
+      Targets:
+        - Id: !Ref pTargetArn
+      Config: !If
+        - IsLambdaTarget
+        - LambdaEventStructureVersion: V2
+        - Port: 443
+          Protocol: HTTPS
+          VpcIdentifier: !Ref pVpcId
+Outputs:
+  outServiceArn:
+    Value: !Ref Service
+  outServiceEndpoint:
+    Value: !GetAtt Service.DnsEntry.DomainName
+  outServiceTargetGroup:
+    Value: !Ref ServiceTargetGroup

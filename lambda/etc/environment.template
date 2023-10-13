@@ -1,0 +1,32 @@
+PROFILE=your-aws-profile
+BUCKET=your-configuration-bucket
+JAVA_HOME=/usr/local/opt/openjdk@17
+TARGET=target/demo-0.0.1-SNAPSHOT.jar
+
+P_VPC_ID=your-vpc-id
+P_HOSTEDZONE_DOMAIN=internal.heeki.cloud
+P_DOMAINNAME=lambda.internal.heeki.cloud
+INFRASTRUCTURE_STACK=lambda-core-infrastructure
+INFRASTRUCTURE_TEMPLATE=iac/infrastructure.yaml
+INFRASTRUCTURE_OUTPUT=iac/infrastructure_output.yaml
+INFRASTRUCTURE_PARAMS="ParameterKey=pVpcId,ParameterValue=${P_VPC_ID} ParameterKey=pHostedZoneDomain,ParameterValue=${P_HOSTEDZONE_DOMAIN} ParameterKey=pDomainName,ParameterValue=${P_DOMAINNAME} ParameterKey=pIngressCidr,ParameterValue=${P_INGRESS_CIDR} ParameterKey=pSubnetIds,ParameterValue=${P_SUBNETIDS_PRIVATE}"
+O_HOSTEDZONE_ID=output-for-hosted-zone
+O_CERT_ARN=output-certificate-arn
+
+P_NAME=demo
+DDB_STACK=${P_NAME}-spring-dynamodb
+DDB_TEMPLATE=iac/dynamodb.yaml
+DDB_OUTPUT=iac/dynamodb_output.yaml
+DDB_PARAMS="ParameterKey=name,ParameterValue=${P_NAME}"
+O_TABLE_ARN=output-table-arn
+
+P_STAGE=dev
+P_FN_MEMORY=1024
+P_FN_TIMEOUT=60
+P_FN_ALIAS_NAME=live
+P_FN_SNAPSTART_APPLY_ON=PublishedVersions
+LAMBDA_STACK=${P_NAME}-spring-function
+LAMBDA_TEMPLATE=iac/lambda.yaml
+LAMBDA_OUTPUT=iac/lambda_output.yaml
+LAMBDA_PARAMS="ParameterKey=pApiStage,ParameterValue=${P_STAGE} ParameterKey=pFnMemory,ParameterValue=${P_FN_MEMORY} ParameterKey=pFnTimeout,ParameterValue=${P_FN_TIMEOUT} ParameterKey=pFnAliasName,ParameterValue=${P_FN_ALIAS_NAME} ParameterKey=pSnapStartApplyOn,ParameterValue=${P_FN_SNAPSTART_APPLY_ON} ParameterKey=pTableArn,ParameterValue=${O_TABLE_ARN}"
+O_FN=output-lambda-function-id

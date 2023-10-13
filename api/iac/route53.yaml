@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Route 53 alias for custom domain names
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  pHostedZoneId:
+    Type: String
+  pDomainName:
+    Type: String
+  pEndpoint:
+    Type: String
+Resources:
+  Alias:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref pHostedZoneId
+      Name: !Ref pDomainName
+      ResourceRecords:
+        - !Ref pEndpoint
+      TTL: 60
+      Type: CNAME
+Outputs:
+  outAlias:
+    Value: !Ref Alias

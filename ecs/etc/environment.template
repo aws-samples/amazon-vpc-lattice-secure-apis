@@ -1,0 +1,46 @@
+PROFILE=your-aws-profile
+ACCOUNTID=your-aws-account-id
+REGION=your-aws-region
+BUCKET=your-configuration-bucket
+JAVA_HOME=/usr/local/opt/openjdk@17
+TARGET=target/demo-0.0.1-SNAPSHOT.jar
+
+P_VPC_ID=your-vpc-id
+P_HOSTEDZONE_DOMAIN=internal.heeki.cloud
+P_DOMAINNAME=ecs.internal.heeki.cloud
+P_INGRESS_CIDR=your-allowed-ingress-cidr-range-for-client-security-group
+P_SUBNETIDS_PRIVATE=your-comma-separated-list-of-private-subnet-ids
+INFRASTRUCTURE_STACK=ecs-core-infrastructure
+INFRASTRUCTURE_TEMPLATE=iac/infrastructure.yaml
+INFRASTRUCTURE_OUTPUT=iac/infrastructure_output.yaml
+INFRASTRUCTURE_PARAMS="ParameterKey=pVpcId,ParameterValue=${P_VPC_ID} ParameterKey=pHostedZoneDomain,ParameterValue=${P_HOSTEDZONE_DOMAIN} ParameterKey=pDomainName,ParameterValue=${P_DOMAINNAME} ParameterKey=pIngressCidr,ParameterValue=${P_INGRESS_CIDR} ParameterKey=pSubnetIds,ParameterValue=${P_SUBNETIDS_PRIVATE}"
+O_HOSTEDZONE_ID=output-for-hosted-zone
+O_CERT_ARN=output-certificate-arn
+O_ALB_ARN=output-alb-arn
+O_ALB_TGROUP=output-alb-target-group-arn
+O_SGROUP_CLIENT=output-security-group-id-for-client
+O_SGROUP_ALB=output-security-group-id-for-alb
+O_SGROUP_TASK=output-security-group-id-for-task
+
+C_REPO_BASE=${ACCOUNTID}.dkr.ecr.${REGION}.amazonaws.com
+C_REPO_IMAGE=your-spring-application-repo-name
+C_VERSION=1
+C_TAG=${C_REPO_IMAGE}:${C_VERSION}
+C_REPO_URI=${C_REPO_BASE}/${C_REPO_IMAGE}:${C_VERSION}
+
+P_DESIRED_COUNT=2
+P_TABLE_ARN=your-spring-dynamodb-table-arn
+ECS_STACK=ecs-cluster
+ECS_TEMPLATE=iac/ecs.yaml
+ECS_OUTPUT=iac/ecs_output.yaml
+ECS_PARAMS="ParameterKey=pDesiredCount,ParameterValue=${P_DESIRED_COUNT} ParameterKey=pALBArn,ParameterValue=${O_ALB_ARN} ParameterKey=pTargetGroupArn,ParameterValue=${O_ALB_TGROUP} ParameterKey=pTaskSGroup,ParameterValue=${O_SGROUP_TASK} ParameterKey=pSubnetIds,ParameterValue=${P_SUBNETIDS_PRIVATE} ParameterKey=pImageUri,ParameterValue=${C_REPO_URI} ParameterKey=pTableArn,ParameterValue=${P_TABLE_ARN}"
+
+P_SUBNETIDS_PUBLIC=your-comma-separated-list-of-public-subnet-ids
+P_BASTION_INGRESS_CIDR=your-allowed-ingress-cidr-range-for-bastion-host
+P_IMAGE_ID=your-instance-ami
+P_INSTANCE_TYPE=t2.micro
+P_SSH_KEY=your-ec2-key
+EC2_STACK=ecs-bastion
+EC2_TEMPLATE=iac/bastion.yaml
+EC2_OUTPUT=iac/bastion_output.yaml
+EC2_PARAMS="ParameterKey=pVpcId,ParameterValue=${P_VPC_ID} ParameterKey=pSubnetIds,ParameterValue=${P_SUBNETIDS_PUBLIC} ParameterKey=pIngressCidr,ParameterValue=${P_INGRESS_CIDR} ParameterKey=pClientSGroup,ParameterValue=${O_SGROUP_CLIENT} ParameterKey=pImageId,ParameterValue=${P_IMAGE_ID} ParameterKey=pInstanceType,ParameterValue=${P_INSTANCE_TYPE} ParameterKey=pKey,ParameterValue=${P_SSH_KEY}"

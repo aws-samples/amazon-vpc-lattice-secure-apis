@@ -1,0 +1,15 @@
+# directories
+.vscode
+etc/*.docker
+etc/*.json
+etc/*.sh
+target
+tmp
+
+# files
+iac/*_output.yaml
+notes.md
+
+# maven
+.mvn
+mvnw

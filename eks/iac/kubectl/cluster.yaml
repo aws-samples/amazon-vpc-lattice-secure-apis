@@ -1,0 +1,24 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: demo
+  region: us-east-1
+vpc:
+  id: your-vpc-id
+  cidr: 10.0.0.0/16
+  subnets:
+    public:
+      us-east-1a: { id: your-public-subnet-id-1 }
+      us-east-1b: { id: your-public-subnet-id-2 }
+    private:
+      us-east-1a: { id: your-private-subnet-id-1 }
+      us-east-1b: { id: your-private-subnet-id-1 }
+nodeGroups:
+  - name: ng-1
+    instanceType: m5.large
+    desiredCapacity: 2
+    volumeSize: 100
+    privateNetworking: true
+    ssh:
+      allow: true
+      publicKeyPath: ~/.ssh/eks_id_rsa.pub

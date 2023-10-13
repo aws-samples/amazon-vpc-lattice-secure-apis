@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: EKS service account for Gateway API controller
+Parameters:
+  pOidcProvider:
+    Type: String
+  pNamespace:
+    Type: String
+  pServiceAccount:
+    Type: String
+  pSGroupId:
+    Type: String
+  pPrefixListLattice:
+    Type: String
+Resources:
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: !Sub |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Federated": "arn:aws:iam::${AWS::AccountId}:oidc-provider/${pOidcProvider}"
+              },
+              "Action": "sts:AssumeRoleWithWebIdentity",
+              "Condition": {
+                "StringEquals": {
+                  "${pOidcProvider}:aud": "sts.amazonaws.com",
+                  "${pOidcProvider}:sub": "system:serviceaccount:${pNamespace}:${pServiceAccount}"
+                }
+              }
+            }
+          ]
+        }
+      Path: "/"
+      Policies:
+        - PolicyName: vpc-lattice
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:CreateServiceLinkedRole
+                  - ec2:DescribeVpcs
+                  - ec2:DescribeSubnets
+                  - ec2:DescribeTags
+                  - vpc-lattice:*
+                Resource: "*"
+  SGroupIngressLattice:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow ingress from VPC Lattice local-link network
+      GroupId: !Ref pSGroupId
+      IpProtocol: -1
+      SourcePrefixListId: !Ref pPrefixListLattice
+Outputs:
+  outRole:
+    Value: !Ref Role
+  outRoleArn:
+    Value: !GetAtt Role.Arn
+  outSGroupIngressLattice:
+    Value: !Ref SGroupIngressLattice

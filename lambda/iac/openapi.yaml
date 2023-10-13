@@ -1,0 +1,79 @@
+openapi: 3.0.1
+info:
+  title: snapstart-spring-boot
+  description: Spring Boot project to test SnapStart
+  version: 1.0.0
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+components:
+  responses:
+    error:
+      description: error
+
+paths:
+  /customer:
+    get:
+      summary: customer
+      description: returns list of customers
+      responses:
+        200:
+          description: ok
+        500:
+          $ref: '#/components/responses/error'
+        default:
+          description: ok
+      x-amazon-apigateway-integration:
+        httpMethod: POST
+        payloadFormatVersion: "2.0"
+        responses:
+          default:
+            statusCode: 200
+        type: aws_proxy
+        uri:
+          Fn::Sub: 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Fn.Arn}:${pFnAliasName}/invocations'
+    post:
+      summary: customer
+      description: create customer
+      responses:
+        200:
+          description: ok
+        default:
+          description: error
+      x-amazon-apigateway-integration:
+        httpMethod: POST
+        payloadFormatVersion: "2.0"
+        responses:
+          default:
+            statusCode: 200
+        type: aws_proxy
+        uri:
+          Fn::Sub: 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Fn.Arn}:${pFnAliasName}/invocations'
+  /customer/{proxy+}:
+    delete:
+      summary: customer
+      description: deletes customer
+      parameters:
+        - in: path
+          name: uid
+          required: true
+          schema:
+            type: string
+          description: customer id
+      responses:
+        200:
+          description: ok
+        500:
+          $ref: '#/components/responses/error'
+        default:
+          $ref: '#/components/responses/error'
+      x-amazon-apigateway-integration:
+        httpMethod: POST
+        payloadFormatVersion: "2.0"
+        responses:
+          default:
+            statusCode: 200
+        type: aws_proxy
+        uri:
+          Fn::Sub: 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Fn.Arn}:${pFnAliasName}/invocations'

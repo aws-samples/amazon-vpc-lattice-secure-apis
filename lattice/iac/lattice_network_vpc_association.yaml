@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC Lattice service network vpc association
+Transform:
+  - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
+Parameters:
+  pVpcId:
+    Type: String
+  pNetworkId:
+    Type: String
+  pSourcePrefixListId:
+    Type: String
+  pIngressSGroup:
+    Type: String
+Conditions:
+  IsIngressSGroupNA: !Equals [!Ref pIngressSGroup, "n/a"]
+Resources:
+  NetworkVpcAssociation:
+    Type: AWS::VpcLattice::ServiceNetworkVpcAssociation
+    Properties:
+      VpcIdentifier: !Ref pVpcId
+      ServiceNetworkIdentifier: !Ref pNetworkId
+      SecurityGroupIds:
+        - !Ref NetworkSecurityGroup
+  NetworkSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: sg-vpc-lattice-network
+      VpcId: !Ref pVpcId
+      SecurityGroupIngress:
+        - SourcePrefixListId: !Ref pSourcePrefixListId
+          IpProtocol: -1
+        - !If
+          - IsIngressSGroupNA
+          - !Ref "AWS::NoValue"
+          - SourceSecurityGroupId: !Ref pIngressSGroup
+            IpProtocol: -1

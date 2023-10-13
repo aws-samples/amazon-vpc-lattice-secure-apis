@@ -1,0 +1,16 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: your-vpc-lattice-service-network-name
+  annotations:
+    application-networking.k8s.aws/lattice-vpc-association: "true"
+spec:
+  gatewayClassName: amazon-vpc-lattice
+  listeners:
+  - name: https-custom-certificate
+    protocol: HTTPS
+    port: 443
+    tls:
+      mode: Terminate
+      options:
+        application-networking.k8s.aws/certificate-arn: arn:aws:acm:us-east-1:001122334455:certificate/your-certificate-id

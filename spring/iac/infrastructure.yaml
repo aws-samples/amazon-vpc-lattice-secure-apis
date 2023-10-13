@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: EKS demo application backend infrastructure
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  # DynamoDB
+  Table:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: uuid
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: uuid
+          KeyType: HASH
+  # ECR
+  Repository:
+    Type: AWS::ECR::Repository
+Outputs:
+  outTable:
+    Value: !GetAtt Table.Arn
+  outRepository:
+    Value: !Ref Repository

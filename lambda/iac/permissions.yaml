@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC Lattice service for multi-account deployment
+Transform:
+  - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
+Parameters:
+  pFnArn:
+    Type: String
+  pServiceTargetGroupArn:
+    Type: String
+Resources:
+  FnPerm:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref pFnArn
+      Principal: vpc-lattice.amazonaws.com
+      Action: lambda:InvokeFunction
+      SourceArn: !Ref pServiceTargetGroupArn
